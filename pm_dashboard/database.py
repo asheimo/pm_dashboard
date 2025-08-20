@@ -30,9 +30,6 @@ class Database:
             config['logging']['level'] = '\"error\"'
             config.write()
 
-            import os
-            os.system("systemctl restart influxdb")
-            
         except Exception as e:
             self.log.error(f"Failed to disable InfluxDB logging: {e}")
 
@@ -40,11 +37,13 @@ class Database:
         self.client = InfluxDBClient(host='localhost', port=8086)
     
     def start(self):
-        if not Database.is_influxdb_running():
-            self.log.info("Starting influxdb service")
-            self.start_influxdb()
-            # Wait 2 seconds for InfluxDB to start
-            time.sleep(2)
+        if Database.is_influxdb_running():
+            import os
+            os.system("killall influxdb &> /dev/null")
+        self.log.info("Starting influxdb service")
+        self.start_influxdb()
+        # Wait 2 seconds for InfluxDB to start
+        time.sleep(2)
 
         self.log.debug("Waiting for InfluxDB to be ready")
         for _ in range(10):
