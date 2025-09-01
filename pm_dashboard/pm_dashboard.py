@@ -17,7 +17,8 @@ from sf_rpi_status import get_disks, get_ips # deprecated
 
 DEBUG_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
 AVAILABLE_OLED_PAGES = []
-AVAILABLE_SEND_EMAIL_ON = [
+AVAILABLE_PIPOWER5_EVENT = [
+    "battery_activated",
     "low_battery",
     "power_disconnected",
     "power_restored",
@@ -54,6 +55,7 @@ __read_data__ = lambda: {}
 __on_outside_config_changed__ = lambda config: None
 __on_inside_config_changed__ = lambda config: None
 __test_smtp__ = lambda: False
+__play_pipower5_buzzer__ = lambda: None
 
 def __update_config__(config):
     global __config__, __on_outside_config_changed__, __on_inside_config_changed__
@@ -509,8 +511,8 @@ def set_send_email_on():
     if on is None:
         return {"status": False, "error": "[ERROR] on not found"}
     for item in on:
-        if item not in AVAILABLE_SEND_EMAIL_ON:
-            return {"status": False, "error": f"[ERROR] on {item} not found, available values: {AVAILABLE_SEND_EMAIL_ON}"}
+        if item not in AVAILABLE_PIPOWER5_EVENT:
+            return {"status": False, "error": f"[ERROR] on {item} not found, available values: {AVAILABLE_PIPOWER5_EVENT}"}
     __update_config__({'system': {'send_email_on': on}})
     return {"status": True, "data": "OK"}
 
@@ -591,6 +593,39 @@ def test_smtp():
         return {"status": status, "data": "OK"}
     else:
         return {"status": status, "error": f'{error}'}
+
+@__app__.route(f'{__api_prefix__}/set-pipower5-buzz-on', methods=['POST'])
+@cross_origin()
+def set_pipower5_buzz_on():
+    if "on" not in request.json:
+        return {"status": False, "error": "[ERROR] on not found"}
+    on = request.json["on"]
+    if on is None:
+        return {"status": False, "error": "[ERROR] on not found"}
+    for item in on:
+        if item not in AVAILABLE_PIPOWER5_EVENT:
+            return {"status": False, "error": f"[ERROR] on {item} not found, available values: {AVAILABLE_PIPOWER5_EVENT}"}
+    __update_config__({'system': {'pipower5_buzz_on': on}})
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/set-pipower5-buzzer-volume', methods=['POST'])
+@cross_origin()
+def set_pipower5_buzzer_volume():
+    if "volume" not in request.json:
+        return {"status": False, "error": "[ERROR] volume not found"}
+    volume = request.json["volume"]
+    if volume is None:
+        return {"status": False, "error": "[ERROR] volume not found"}
+    if volume < 0 or volume > 10:
+        return {"status": False, "error": "[ERROR] volume must be between 0 and 100"}
+    __update_config__({'system': {'pipower5_buzzer_volume': volume}})
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/play-pipower5-buzzer', methods=['POST'])
+@cross_origin()
+def play_pipower5_buzzer():
+    __play_pipower5_buzzer__()
+    return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/clear-history', methods=['POST', 'GET'])
 @cross_origin()
@@ -686,14 +721,14 @@ class PMDashboard():
             __config__['system']['database_retention_days'] = 30
         database_retention_days = __config__['system']['database_retention_days'] 
 
+        if __enable_history__:
+            __db__ = Database(database, log=log, retention_days=database_retention_days)
         self.data_logger = DataLogger(
-            database=database,
+            database=__db__,
             spc_enabled=spc_enabled,
             interval=__config__['system']['data_interval'],
             log=self.log)
         __data_logger__ = self.data_logger
-        if __enable_history__:
-            __db__ = Database(database, log=log, retention_days=database_retention_days)
 
         self.started = False
         __on_inside_config_changed__ = self.on_config_changed
@@ -719,10 +754,6 @@ class PMDashboard():
 
     @log_error
     def start(self):
-        if __db__:
-            self.log.debug("Starting Database")
-            __db__.start()
-            self.log.info("Database Started")
         self.log.debug("Initializing Dashboard Server")
         self.log.info(f"Starting Dashboard Server on {__host__}:{__port__}")
         self.server = make_server(__host__, __port__, __app__)
@@ -739,15 +770,15 @@ class PMDashboard():
         if 'database_retention_days' in config['system']:
             __config__['system']['database_retention_days'] = config['system']['database_retention_days']
             __db__.set_retention_days(config['system']['database_retention_days'])
-        if 'enable_history' in config['system']:
-            if config['system']['enable_history'] == True:
-                if __enable_history__ == False:
-                    self.data_logger.start()
-                __enable_history__ = True
-            else:
-                if __enable_history__ == True:
-                    self.data_logger.stop()
-                __enable_history__ = False
+        # if 'enable_history' in config['system']:
+        #     if config['system']['enable_history'] == True:
+        #         if __enable_history__ == False:
+        #             self.data_logger.start()
+        #         __enable_history__ = True
+        #     else:
+        #         if __enable_history__ == True:
+        #             self.data_logger.stop()
+        #         __enable_history__ = False
 
     @log_error
     def set_read_data(self, func):
@@ -764,6 +795,11 @@ class PMDashboard():
     def set_on_restart_service(self, func):
         global __restart_service__
         __restart_service__ = func
+
+    @log_error
+    def set_play_pipower5_buzzer(self, func):
+        global __play_pipower5_buzzer__
+        __play_pipower5_buzzer__ = func
 
     @log_error
     def run(self):

@@ -21,6 +21,7 @@ class Database:
         self.database = database
         self.retention_days = retention_days
         self.influx_manually_started = False
+        self.starting = False
 
         # disable InfluxDB logging to avoid cluttering the logs
         try:
@@ -37,6 +38,7 @@ class Database:
         self.client = InfluxDBClient(host='localhost', port=8086)
     
     def start(self):
+        self.is_starting = True
         if Database.is_influxdb_running():
             import os
             os.system("killall influxdb &> /dev/null")
@@ -47,6 +49,8 @@ class Database:
 
         self.log.debug("Waiting for InfluxDB to be ready")
         for _ in range(10):
+            if not self.is_starting:
+                return False
             if self.is_ready():
                 self.log.info("Influxdb is ready")
                 break
@@ -296,5 +300,6 @@ class Database:
         self.client.close()
         if self.influx_manually_started:
             self.stop_influxdb()
+        self.is_starting = False
         self.log.info("Database closed")
 

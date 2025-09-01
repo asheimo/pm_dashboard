@@ -1,11 +1,9 @@
-from textwrap import indent
 import time
 import logging
 import threading
 
 from influxdb import InfluxDBClient
 
-from .database import Database
 from .utils import log_error
 
 # deprecated
@@ -28,7 +26,7 @@ from sf_rpi_status import \
 class DataLogger:
 
     @log_error
-    def __init__(self, database='pm_dashboard', interval=1, spc_enabled=False, log=None):
+    def __init__(self, database=None, interval=1, spc_enabled=False, log=None):
         self.log = log or logging.getLogger(app_name)
         self._is_ready = False
 
@@ -39,12 +37,11 @@ class DataLogger:
             return
 
         self.spc = None
-        self.db = None
 
         self.thread = None
         self.running = False
 
-        self.db = Database(database, log=log)
+        self.db = database
         self.interval = interval
         if spc_enabled:
             self.log.info("SPC peripheral enabled")
@@ -161,10 +158,10 @@ class DataLogger:
                 elif isinstance(value, dict):
                     continue
                 new_data[key] = value
-
-            status, msg = self.db.set('history', new_data)
-            if not status:
-                self.log.error(f"Failed to set data: {msg}")
+            if self.db is not None:
+                status, msg = self.db.set('history', new_data)
+                if not status:
+                    self.log.error(f"Failed to set data: {msg}")
             # else:
                 # self.log.debug(f"Set data: {new_data}")
 
@@ -178,7 +175,6 @@ class DataLogger:
         if self.running:
             self.log.warning("Already running")
             return
-        self.db.start()
         self.running = True
         self.thread = threading.Thread(target=self.loop)
         self.thread.start()
@@ -190,5 +186,4 @@ class DataLogger:
         if self.running:
             self.running = False
             self.thread.join()
-            self.db.close()
         self.log.info("Data Logger stopped")
