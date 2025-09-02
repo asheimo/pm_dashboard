@@ -624,7 +624,14 @@ def set_pipower5_buzzer_volume():
 @__app__.route(f'{__api_prefix__}/play-pipower5-buzzer', methods=['POST'])
 @cross_origin()
 def play_pipower5_buzzer():
-    __play_pipower5_buzzer__()
+    if "event" not in request.json:
+        return {"status": False, "error": "[ERROR] event not found"}
+    event = request.json["event"]
+    if event is None:
+        return {"status": False, "error": "[ERROR] event not found"}
+    if event not in AVAILABLE_PIPOWER5_EVENT:
+        return {"status": False, "error": f"[ERROR] event {event} not found, available values: {AVAILABLE_PIPOWER5_EVENT}"}
+    __play_pipower5_buzzer__(event)
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/clear-history', methods=['POST', 'GET'])
