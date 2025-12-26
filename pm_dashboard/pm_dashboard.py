@@ -14,6 +14,8 @@ from .database import Database
 from .utils import log_error, merge_dict
 import logging
 from sf_rpi_status import get_disks, get_ips # deprecated
+from sf_rpi_status import shutdown as __shutdown__
+from sf_rpi_status import reboot as __reboot__
 
 DEBUG_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
 AVAILABLE_OLED_PAGES = []
@@ -128,19 +130,25 @@ def get_log_level(line):
 @__app__.route('/')
 @cross_origin()
 def dashboard():
-    with open(f'{__app__.static_folder}/index.html') as f:
-        return f.read()
+    return send_from_directory(__app__.static_folder, 'index.html')
+
+# Host dashboard css
+@__app__.route('/index.css')
+@cross_origin()
+def dashboard_css():
+    return send_from_directory(__app__.static_folder, 'index.css')
+
+# Host favicon
+@__app__.route('/favicon.ico')
+@cross_origin()
+def favicon():
+    return send_from_directory(__app__.static_folder, 'favicon.ico')
 
 # Host static files for dashboard page
-@__app__.route('/<path:filename>')
+@__app__.route('/static/<path:path>')
 @cross_origin()
-def serve_static(filename):
-    path = __app__.static_folder
-    if '/' in filename:
-        items = filename.split('/')
-        filename = items[-1]
-        path = path + '/' + '/'.join(items[:-1])
-    return send_from_directory(path, filename)
+def serve_static(path):
+    return send_from_directory(f"{__app__.static_folder}/static", path)
 
 # host API
 @__app__.route(f'{__api_prefix__}/get-version')
@@ -692,6 +700,18 @@ def set_restart_service():
     __restart_service__()
     return {"status": True, "data": "OK"}
 
+@__app__.route(f'{__api_prefix__}/set-shutdown', methods=['POST'])
+@cross_origin()
+def set_shutdown():
+    __shutdown__()
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/set-reboot', methods=['POST'])
+@cross_origin()
+def set_reboot():
+    __reboot__()
+    return {"status": True, "data": "OK"}
+
 @__app__.route(f'{__api_prefix__}/set-database-retention-days', methods=['POST'])
 @cross_origin()
 def set_database_retention_days():
@@ -700,6 +720,13 @@ def set_database_retention_days():
         return {"status": False, "error": "[ERROR] database_retention_days not found"}
     __update_config__({'system': {'database_retention_days': database_retention_days}})
     return {"status": True, "data": "OK"}
+
+# Catch-all route for single-page application
+@__app__.route('/<path:path>')
+@cross_origin()
+def catch_all(path):
+    with open(f'{__app__.static_folder}/index.html') as f:
+        return f.read()
 
 class PMDashboard():
     def __init__(self, device_info=None, database='pm_dashboard', spc_enabled=False, config=None, log=None, get_logger=None):
