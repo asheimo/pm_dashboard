@@ -703,12 +703,14 @@ def set_restart_service():
 @__app__.route(f'{__api_prefix__}/set-shutdown', methods=['POST'])
 @cross_origin()
 def set_shutdown():
+    __log__.info("Shutdown requested")
     __shutdown__()
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-reboot', methods=['POST'])
 @cross_origin()
 def set_reboot():
+    __log__.info("Reboot requested")
     __reboot__()
     return {"status": True, "data": "OK"}
 
