@@ -70,7 +70,7 @@ class DataLogger:
         self.interval = interval
 
     @log_error
-    def get_data(self):
+    def _get_data(self): # deprecated
         boot_time = get_boot_time()
         ips = get_ips()
         macs = get_macs()
@@ -139,31 +139,37 @@ class DataLogger:
         return data
 
     @log_error
+    def get_data(self):
+        if self.__read_data__ is not None:
+            data = self.__read_data__()
+        else:
+            data = self.get_data() # deprecated
+        if data == {}:
+            return {}
+
+        new_data = {}
+        for key, value in data.items():
+            if isinstance(value, bool):
+                value = int(value)
+            elif isinstance(value, list):
+                continue
+            elif isinstance(value, dict):
+                continue
+            new_data[key] = value
+        return new_data
+
+    @log_error
     def loop(self):
         start = time.time()
         while self.running:
-            if self.__read_data__ is not None:
-                data = self.__read_data__()
-            else:
-                data = self.get_data() # deprecated
-            if data == {}:
-                continue
-
-            new_data = {}
-            for key, value in data.items():
-                if isinstance(value, bool):
-                    value = int(value)
-                elif isinstance(value, list):
-                    continue
-                elif isinstance(value, dict):
-                    continue
-                new_data[key] = value
-            if self.db is not None:
-                status, msg = self.db.set('history', new_data)
-                if not status:
-                    self.log.error(f"Failed to set data: {msg}")
-            # else:
-                # self.log.debug(f"Set data: {new_data}")
+            data = self.get_data()
+            if data != {}:
+                if self.db is not None:
+                    status, msg = self.db.set('history', data)
+                    if not status:
+                        self.log.error(f"Failed to set data: {msg}")
+                # else:
+                    # self.log.debug(f"Set data: {new_data}")
 
             elapsed = time.time() - start
             if elapsed < self.interval:
