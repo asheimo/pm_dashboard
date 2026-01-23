@@ -374,7 +374,7 @@ def set_rgb_enable():
 @__app__.route(f'{__api_prefix__}/set-rgb-led-count', methods=['POST'])
 @cross_origin()
 def set_rgb_led_count():
-    led_count = request.json["led-count"]
+    led_count = request.json["led_count"]
     __update_config__({'system': {'rgb_led_count': led_count}})
     return {"status": True, "data": "OK"}
 
