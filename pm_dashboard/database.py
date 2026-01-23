@@ -11,8 +11,6 @@ from pm_dashboard.utils import log_error
 from .config import Config
 import threading
 
-INFLUXDB_CONFIG = "/etc/influxdb/influxdb.conf"
-
 class Database:
     def __init__(self, database, log=None, retention_days=30):
         self.log = log or logging.getLogger(__name__)
@@ -22,17 +20,6 @@ class Database:
         self.retention_days = retention_days
         self.influx_manually_started = False
         self.starting = False
-
-        # disable InfluxDB logging to avoid cluttering the logs
-        try:
-            config = Config(path=INFLUXDB_CONFIG)
-            config.read()
-            config['http']['log-enabled'] = 'false'
-            config['logging']['level'] = '\"error\"'
-            config.write()
-
-        except Exception as e:
-            self.log.error(f"Failed to disable InfluxDB logging: {e}")
 
         # initialize InfluxDB client
         self.client = InfluxDBClient(host='localhost', port=8086)
