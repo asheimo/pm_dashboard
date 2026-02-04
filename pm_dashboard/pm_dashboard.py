@@ -40,12 +40,10 @@ __restart_service__ = lambda: None
 
 __db__ = None
 __data_logger__ = None
-__config__ = {}
 __app__ = flask.Flask(__name__, static_folder=__www_path__)
 
 __app__.logger.setLevel(logging.WARN)
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
-
 
 __cors__ = CORS(__app__)
 __app__.config['CORS_HEADERS'] = 'Content-Type'
@@ -54,19 +52,10 @@ __mqtt_connected__ = False
 __enable_history__ = False
 
 __read_data__ = lambda: {}
-__on_outside_config_changed__ = lambda config: None
-__on_inside_config_changed__ = lambda config: None
+__read_config__ = lambda: {}
+__on_config_changed__ = lambda config: None
 __test_smtp__ = lambda: False
 __play_pipower5_buzzer__ = lambda: None
-
-def __update_config__(config):
-    global __config__, __on_outside_config_changed__, __on_inside_config_changed__
-    new_config = __on_outside_config_changed__(config)
-    __on_inside_config_changed__(config)
-    if new_config is None:
-        __config__ = merge_dict(__config__, config)
-    else:
-        __config__ = new_config
 
 def on_mqtt_connected(client, userdata, flags, rc):
     global __mqtt_connected__
@@ -259,7 +248,7 @@ def get_time_range():
 @__app__.route(f'{__api_prefix__}/get-config')
 @cross_origin()
 def get_config():
-    return {"status": True, "data": __config__}
+    return {"status": True, "data": __read_config__()}
 
 @__app__.route(f'{__api_prefix__}/get-log-list')
 @cross_origin()
@@ -320,14 +309,14 @@ def set_temperature_unit():
     unit = unit.upper()
     if unit not in ['C', 'F']:
         return {"status": False, "error": f"[ERROR] temperature unit {unit} not found, available units: C, F"}
-    __update_config__({'system': {'temperature_unit': unit}})
+    __on_config_changed__({'system': {'temperature_unit': unit}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-shutdown-percentage', methods=['POST'])
 @cross_origin()
 def set_shutdown_percentage():
     percentage = request.json["shutdown-percentage"]
-    __update_config__({'system': {'shutdown_percentage': percentage}})
+    __on_config_changed__({'system': {'shutdown_percentage': percentage}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-fan-led', methods=['POST'])
@@ -336,7 +325,7 @@ def set_fan_led():
     led = request.json["led"]
     if led not in ['on', 'off', 'follow']:
         return {"status": False, "error": f"[ERROR] led {led} not found, available values: on, off or follow"}
-    __update_config__({'system': {'gpio_fan_led': led}})
+    __on_config_changed__({'system': {'gpio_fan_led': led}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-fan-mode', methods=['POST'])
@@ -347,98 +336,98 @@ def set_fan_mode():
         return {"status": False, "error": f"[ERROR] fan mode {mode} not found, available modes: 0, 1, 2, 3, 4, for Alway On, Performance, Cool, Balance, or Silent"}
     if mode < 0 or mode > 4:
         return {"status": False, "error": f"[ERROR] fan mode {mode} not found, available modes: 0, 1, 2, 3, 4, for Alway On, Performance, Cool, Balance, or Silent"}
-    __update_config__({'system': {'gpio_fan_mode': mode}})
+    __on_config_changed__({'system': {'gpio_fan_mode': mode}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-rgb-brightness', methods=['POST'])
 @cross_origin()
 def set_rgb_brightness():
     brightness = request.json["brightness"]
-    __update_config__({'system': {'rgb_brightness': brightness}})
+    __on_config_changed__({'system': {'rgb_brightness': brightness}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-rgb-color', methods=['POST'])
 @cross_origin()
 def set_rgb_color():
     color = request.json["color"]
-    __update_config__({'system': {'rgb_color': color}})
+    __on_config_changed__({'system': {'rgb_color': color}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-rgb-enable', methods=['POST'])
 @cross_origin()
 def set_rgb_enable():
     enable = request.json["enable"]
-    __update_config__({'system': {'rgb_enable': enable}})
+    __on_config_changed__({'system': {'rgb_enable': enable}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-rgb-led-count', methods=['POST'])
 @cross_origin()
 def set_rgb_led_count():
     led_count = request.json["led_count"]
-    __update_config__({'system': {'rgb_led_count': led_count}})
+    __on_config_changed__({'system': {'rgb_led_count': led_count}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-rgb-style', methods=['POST'])
 @cross_origin()
 def set_rgb_style():
     style = request.json["style"]
-    __update_config__({'system': {'rgb_style': style}})
+    __on_config_changed__({'system': {'rgb_style': style}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-rgb-speed', methods=['POST'])
 @cross_origin()
 def set_rgb_speed():
     speed = request.json["speed"]
-    __update_config__({'system': {'rgb_speed': speed}})
+    __on_config_changed__({'system': {'rgb_speed': speed}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-rgb-matrix-enable', methods=['POST'])
 @cross_origin()
 def set_rgb_matrix_enable():
     enable = request.json["enable"]
-    __update_config__({'system': {'rgb_matrix_enable': enable}})
+    __on_config_changed__({'system': {'rgb_matrix_enable': enable}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-rgb-matrix-style', methods=['POST'])
 @cross_origin()
 def set_rgb_matrix_style():
     style = request.json["style"]
-    __update_config__({'system': {'rgb_matrix_style': style}})
+    __on_config_changed__({'system': {'rgb_matrix_style': style}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-rgb-matrix-color', methods=['POST'])
 @cross_origin()
 def set_rgb_matrix_color():
     color = request.json["color"]
-    __update_config__({'system': {'rgb_matrix_color': color}})
+    __on_config_changed__({'system': {'rgb_matrix_color': color}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-rgb-matrix-color2', methods=['POST'])
 @cross_origin()
 def set_rgb_matrix_color2():
     color = request.json["color"]
-    __update_config__({'system': {'rgb_matrix_color2': color}})
+    __on_config_changed__({'system': {'rgb_matrix_color2': color}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-rgb-matrix-brightness', methods=['POST'])
 @cross_origin()
 def set_rgb_matrix_brightness():
     brightness = request.json["brightness"]
-    __update_config__({'system': {'rgb_matrix_brightness': brightness}})
+    __on_config_changed__({'system': {'rgb_matrix_brightness': brightness}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-rgb-matrix-speed', methods=['POST'])
 @cross_origin()
 def set_rgb_matrix_speed():
     speed = request.json["speed"]
-    __update_config__({'system': {'rgb_matrix_speed': speed}})
+    __on_config_changed__({'system': {'rgb_matrix_speed': speed}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-debug-level', methods=['POST'])
 @cross_origin()
 def set_debug_level():
     level = request.json["level"]
-    __update_config__({'system': {'debug_level': level}})
+    __on_config_changed__({'system': {'debug_level': level}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-oled-sleep-timeout', methods=['POST'])
@@ -447,7 +436,7 @@ def set_oled_sleep_timeout():
     timeout = request.json["timeout"]
     if not isinstance(timeout, (int, float)) or timeout < 0:
         return {"status": False, "error": f"[ERROR] timeout {timeout} must be a positive number"}
-    __update_config__({'system': {'oled_sleep_timeout': timeout}})
+    __on_config_changed__({'system': {'oled_sleep_timeout': timeout}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-oled-enable', methods=['POST'])
@@ -456,7 +445,7 @@ def set_oled_enable():
     enable = request.json["enable"]
     if not isinstance(enable, bool):
         return {"status": False, "error": f"[ERROR] enable {enable} not found, available values: True or False"}
-    __update_config__({'system': {'oled_enable': enable}})
+    __on_config_changed__({'system': {'oled_enable': enable}})
     return {"status": True, "data": "OK"}
 
 # deprecated
@@ -471,7 +460,7 @@ def set_oled_disk():
         disk = "total"
     elif disk not in disks:
         return {"status": False, "error": f"[ERROR] disk {disk} not found, available disks: {disks}"}
-    __update_config__({'system': {'oled_disk': disk}})
+    __on_config_changed__({'system': {'oled_disk': disk}})
     return {"status": True, "data": "OK"}
 
 # deprecated
@@ -486,7 +475,7 @@ def set_oled_network_interface():
         interface = "eth0"
     elif interface not in interfaces:
         return {"status": False, "error": f"[ERROR] interface {interface} not found, available interfaces: {interfaces}"}
-    __update_config__({'system': {'oled_network_interface': interface}})
+    __on_config_changed__({'system': {'oled_network_interface': interface}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-oled-rotation', methods=['POST'])
@@ -495,7 +484,7 @@ def set_oled_rotation():
     rotation = request.json["rotation"]
     if rotation not in [0, 180]:
         return {"status": False, "error": f"[ERROR] rotation {rotation} not found, available values: 0 or 180"}
-    __update_config__({'system': {'oled_rotation': rotation}})
+    __on_config_changed__({'system': {'oled_rotation': rotation}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-oled-pages', methods=['POST'])
@@ -507,7 +496,7 @@ def set_oled_pages():
     for page in pages:
         if page not in AVAILABLE_OLED_PAGES:
             return {"status": False, "error": f"[ERROR] page {page} not found, available pages: {AVAILABLE_OLED_PAGES}"}
-    __update_config__({'system': {'oled_pages': pages}})
+    __on_config_changed__({'system': {'oled_pages': pages}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-send-email-on', methods=['POST'])
@@ -521,7 +510,7 @@ def set_send_email_on():
     for item in on:
         if item not in AVAILABLE_PIPOWER5_EVENT:
             return {"status": False, "error": f"[ERROR] on {item} not found, available values: {AVAILABLE_PIPOWER5_EVENT}"}
-    __update_config__({'system': {'send_email_on': on}})
+    __on_config_changed__({'system': {'send_email_on': on}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-send-email-to', methods=['POST'])
@@ -532,7 +521,7 @@ def set_send_email_to():
     to = request.json["to"]
     if to is None:
         return {"status": False, "error": "[ERROR] to not found"}
-    __update_config__({'system': {'send_email_to': to}})
+    __on_config_changed__({'system': {'send_email_to': to}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-smtp-server', methods=['POST'])
@@ -543,7 +532,7 @@ def set_smtp_server():
     server = request.json["server"]
     if server is None:
         return {"status": False, "error": "[ERROR] server not found"}
-    __update_config__({'system': {'smtp_server': server}})
+    __on_config_changed__({'system': {'smtp_server': server}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-smtp-port', methods=['POST'])
@@ -554,7 +543,7 @@ def set_smtp_port():
     port = request.json["port"]
     if not isinstance(port, int) or port <= 0:
         return {"status": False, "error": "[ERROR] port must be a positive integer"}
-    __update_config__({'system': {'smtp_port': port}})
+    __on_config_changed__({'system': {'smtp_port': port}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-smtp-email', methods=['POST'])
@@ -565,7 +554,7 @@ def set_smtp_email():
     email = request.json["email"]
     if email is None:
         return {"status": False, "error": "[ERROR] email not found"}
-    __update_config__({'system': {'smtp_email': email}})
+    __on_config_changed__({'system': {'smtp_email': email}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-smtp-password', methods=['POST'])
@@ -576,7 +565,7 @@ def set_smtp_password():
     smtp_password = request.json["password"]
     if smtp_password is None:
         return {"status": False, "error": "[ERROR] password not found"}
-    __update_config__({'system': {'smtp_password': smtp_password}})
+    __on_config_changed__({'system': {'smtp_password': smtp_password}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-smtp-security', methods=['POST'])
@@ -589,7 +578,7 @@ def set_smtp_security():
         return {"status": False, "error": "[ERROR] security not found"}
     if security not in ['none', 'ssl', 'tls']:
         return {"status": False, "error": "[ERROR] security must be 'none', 'ssl' or 'tls'"}
-    __update_config__({'system': {'smtp_security': security}})
+    __on_config_changed__({'system': {'smtp_security': security}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/test-smtp', methods=['POST', 'GET'])
@@ -613,7 +602,7 @@ def set_pipower5_buzz_on():
     for item in on:
         if item not in AVAILABLE_PIPOWER5_EVENT:
             return {"status": False, "error": f"[ERROR] on {item} not found, available values: {AVAILABLE_PIPOWER5_EVENT}"}
-    __update_config__({'system': {'pipower5_buzz_on': on}})
+    __on_config_changed__({'system': {'pipower5_buzz_on': on}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-pipower5-buzzer-volume', methods=['POST'])
@@ -626,7 +615,7 @@ def set_pipower5_buzzer_volume():
         return {"status": False, "error": "[ERROR] volume not found"}
     if volume < 0 or volume > 10:
         return {"status": False, "error": "[ERROR] volume must be between 0 and 100"}
-    __update_config__({'system': {'pipower5_buzzer_volume': volume}})
+    __on_config_changed__({'system': {'pipower5_buzzer_volume': volume}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/play-pipower5-buzzer', methods=['POST'])
@@ -720,7 +709,7 @@ def set_database_retention_days():
     database_retention_days = request.json["days"]
     if database_retention_days is None:
         return {"status": False, "error": "[ERROR] database_retention_days not found"}
-    __update_config__({'system': {'database_retention_days': database_retention_days}})
+    __on_config_changed__({'system': {'database_retention_days': database_retention_days}})
     return {"status": True, "data": "OK"}
 
 # Catch-all route for single-page application
@@ -731,8 +720,8 @@ def catch_all(path):
         return f.read()
 
 class PMDashboard():
-    def __init__(self, device_info=None, database='pm_dashboard', spc_enabled=False, config=None, log=None, get_logger=None):
-        global __config__, __device_info__, __on_inside_config_changed__, __log_path__, __enable_history__
+    def __init__(self, device_info=None, database='pm_dashboard', config=None, log=None, get_logger=None):
+        global __device_info__, __log_path__, __enable_history__
         global __data_logger__, __db__, __log__, __restart_service__
         global AVAILABLE_OLED_PAGES
 
@@ -749,35 +738,27 @@ class PMDashboard():
             self.log = log or logging.getLogger(__name__)
         __log__ = self.log
 
-        __config__ = config
-        if 'enable_history' not in __config__['system']:
-            __config__['system']['enable_history'] = False
+        if 'enable_history' not in config['system']:
+            config['system']['enable_history'] = False
         __enable_history__ = config['system']['enable_history']
-        if 'database_retention_days' not in __config__['system']:
-            __config__['system']['database_retention_days'] = 30
-        database_retention_days = __config__['system']['database_retention_days'] 
+        if 'database_retention_days' not in config['system']:
+            config['system']['database_retention_days'] = 30
+        database_retention_days = config['system']['database_retention_days'] 
 
         if __enable_history__:
             __db__ = Database(database, log=log, retention_days=database_retention_days)
         self.data_logger = DataLogger(
             database=__db__,
-            spc_enabled=spc_enabled,
-            interval=__config__['system']['data_interval'],
+            interval=config['system']['data_interval'],
             log=self.log)
         __data_logger__ = self.data_logger
 
         self.started = False
-        __on_inside_config_changed__ = self.on_config_changed
 
         AVAILABLE_OLED_PAGES = []
         for item in __device_info__['peripherals']:
             if item.startswith("oled_page_"):
                 AVAILABLE_OLED_PAGES.append(item.split("oled_page_")[1])
-
-    # deprecated
-    @log_error
-    def update_status(self, status):
-        self.data_logger.update_status(status)
 
     @log_error
     def set_debug_level(self, level):
@@ -800,21 +781,15 @@ class PMDashboard():
         self.log.info("Dashboard Server Started")
 
     @log_error
-    def on_config_changed(self, config):
-        if 'data_interval' in config['system']:
-            self.data_logger.set_interval(config['system']['data_interval'])
-        if 'database_retention_days' in config['system']:
-            __config__['system']['database_retention_days'] = config['system']['database_retention_days']
-            __db__.set_retention_days(config['system']['database_retention_days'])
-        # if 'enable_history' in config['system']:
-        #     if config['system']['enable_history'] == True:
-        #         if __enable_history__ == False:
-        #             self.data_logger.start()
-        #         __enable_history__ = True
-        #     else:
-        #         if __enable_history__ == True:
-        #             self.data_logger.stop()
-        #         __enable_history__ = False
+    def update_config(self, config):
+        patch = {}
+        if 'data_interval' in config:
+            self.data_logger.set_interval(config['data_interval'])
+            patch['data_interval'] = config['data_interval']
+        if 'database_retention_days' in config:
+            __db__.set_retention_days(config['database_retention_days'])
+            patch['database_retention_days'] = config['database_retention_days']
+        return patch
 
     @log_error
     def set_read_data(self, func):
@@ -823,9 +798,14 @@ class PMDashboard():
         self.data_logger.set_read_data(func)
 
     @log_error
+    def set_read_config(self, func):
+        global __read_config__
+        __read_config__ = func
+
+    @log_error
     def set_on_config_changed(self, func):
-        global __on_outside_config_changed__
-        __on_outside_config_changed__ = func
+        global __on_config_changed__
+        __on_config_changed__ = func
 
     @log_error
     def set_on_restart_service(self, func):
