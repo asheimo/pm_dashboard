@@ -51,7 +51,6 @@ DEVICE_INFO = {
 DASHBOARD_SETTINGS = {
     "database": "pironman5",
     "data_interval": 1,
-    "spc": False,
 }
 
 pm_dashboard = PMDashboard(device_info=DEVICE_INFO,
