@@ -73,7 +73,7 @@ class Database:
 
     def start_influxdb(self):
         # Start InfluxDB in the background
-        subprocess.Popen(["influxd"])
+        subprocess.Popen(["influxd"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         self.influx_manually_started = True
 
     def stop_influxdb(self):
@@ -177,7 +177,7 @@ class Database:
             return True, f"Retention policy set to {days} days"
             
         except Exception as e:
-            self.log.error(f"Failed to set retention policy: {e}")
+            self.log.exception(f"Failed to set retention policy: {e}")
             return False, str(e)
 
     def set(self, measurement, data):
