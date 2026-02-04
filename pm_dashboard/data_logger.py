@@ -6,8 +6,6 @@ from influxdb import InfluxDBClient
 
 from .utils import log_error
 
-import json
-
 class DataLogger:
 
     @log_error
@@ -52,7 +50,7 @@ class DataLogger:
             if isinstance(value, bool):
                 value = int(value)
             elif isinstance(value, list):
-                value = json.dumps(value)
+                continue
             elif isinstance(value, dict):
                 continue
             new_data[key] = value
