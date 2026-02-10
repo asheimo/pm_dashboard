@@ -11,7 +11,7 @@ from werkzeug.serving import make_server
 
 from .data_logger import DataLogger
 from .database import Database
-from .utils import log_error, merge_dict
+from .utils import log_error
 import logging
 from sf_rpi_status import get_disks, get_ips # deprecated
 from sf_rpi_status import shutdown as __shutdown__
@@ -364,6 +364,8 @@ def set_rgb_enable():
 @cross_origin()
 def set_rgb_led_count():
     led_count = request.json["led_count"]
+    if "rgb_led_count_min" in __read_config__()["system"] and led_count < __read_config__()["system"]["rgb_led_count_min"]:
+        return {"status": False, "error": f"[ERROR] led count {led_count} not found, available led count: >= {__read_config__()['system']['rgb_led_count_min']}"}
     __on_config_changed__({'system': {'rgb_led_count': led_count}})
     return {"status": True, "data": "OK"}
 
